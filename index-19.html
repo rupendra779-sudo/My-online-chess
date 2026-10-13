@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>BILLU CHESS</title>
+<style>
+:root{
+  --page:#000;
+  --frame:#8b4a1d;
+  --frame-light:#c17b35;
+  --light:#f3d39a;
+  --dark:#6e351c;
+  --gold:#f4c66d;
+  --gold-edge:#6b421c;
+  --ink:#171719;
+  --last:#e8cf54;
+  --select:#8f72df;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--page)}
+body{color:#fff4dc;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:10px 7px max(24px,env(safe-area-inset-bottom));}
+main{width:min(760px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center}
+main>*{width:100%}
+h1{margin:4px 0 9px;text-align:center;color:#ffe2a2;font:700 clamp(22px,4.5vw,36px)/1.15 Georgia,"Times New Roman",serif;letter-spacing:.8px}
+.status{width:min(365px,100%);margin:0 auto 10px;padding:10px 8px;border:1px solid #444;border-radius:12px;background:#111;text-align:center;font-size:clamp(15px,3vw,20px);font-weight:800;color:#fff}
+.board-wrap{width:100%;padding:0;background:transparent;border:0;box-shadow:none;border-radius:0;display:flex;justify-content:center;}
+.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1/1;width:100%;max-width: min(100%, 720px);overflow:hidden;margin:0 auto}
+.square{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:0;margin:0;overflow:hidden;cursor:pointer;touch-action:manipulation;user-select:none}
+.square.light{background:#F5E6C8}
+.square.dark{background:#8B5E3C}
+.square.last{box-shadow:inset 0 0 0 4px var(--last)}
+.square.selected{box-shadow:inset 0 0 0 4px var(--select)}
+.square.target:after{content:"";position:absolute;width:22%;height:22%;border-radius:50%;background:#17171770;pointer-events:none}
+.piece{display:flex;align-items:center;justify-content:center;position:relative;z-index:1;width:94%;height:94%;font-family:"DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",serif;font-size:clamp(35px,10.4vw,72px);line-height:1;transform-origin:center;user-select:none;text-shadow:none;filter:none}
+.piece-gold{color:#FFFFFF;-webkit-text-fill-color:#FFFFFF;-webkit-text-stroke:.55px #101820;text-shadow:none}
+.piece-black{color:#000000;-webkit-text-fill-color:#000000;-webkit-text-stroke:.55px #FFFFFF;text-shadow:none}
+.piece.pawn{font-size:clamp(33.25px,9.88vw,68.4px)}
+.piece.rotated-facing{transform:rotate(180deg)!important}
+.piece.gold-queen{color:#FFFFFF;-webkit-text-fill-color:#FFFFFF;-webkit-text-stroke:.55px #101820;text-shadow:none}
+.coordinates{display:none}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0;width:100%}
+.action{min-width:0;min-height:54px;padding:10px 5px;border:1px solid #4d4d4d;border-radius:12px;background:#111;color:#f7f7f7;font-size:clamp(11px,2.6vw,15px);font-weight:750;line-height:1.25;cursor:pointer}
+.action.primary{background:linear-gradient(#ffdc89,#f4c66d);border-color:#ffdf9a;color:#17120b}
+.action:focus-visible,.square:focus-visible{outline:3px solid #e8cf54;outline-offset:-3px}
+#message{display:none}
+.panel{margin-top:12px;padding:14px;background:#111;border:1px solid #45403b;border-radius:14px}
+.panel[hidden]{display:none}
+.panel h2{margin:0 0 8px;font-size:18px}
+.panel p{margin:6px 0 12px;color:#ded2bf;font-size:14px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input{flex:1;min-width:120px;border:1px solid #aaa;border-radius:9px;padding:12px;font-size:16px;color:#111;background:#fff}
+.note{font-size:12px!important;color:#aaa!important;margin-top:10px!important}
+@media(min-width:600px){body{padding-top:18px}.square.last,.square.selected{box-shadow:inset 0 0 0 5px var(--last)}}
+@media(max-width:370px){body{padding-left:5px;padding-right:5px}.controls{gap:5px}.action{font-size:10px;padding:8px 2px;min-height:48px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>♟ BILLU CHESS ♟</h1>
+  <div class="status" id="status" aria-live="polite">WHITE'S TURN</div>
+  <div class="board-wrap"><div class="board" id="board" aria-label="Chess board"></div></div>
+  <div id="message" aria-live="polite"></div>
+  <div class="controls">
+    <button class="action primary" id="newGame">🎮 New game</button>
+    <button class="action" id="flip">⇄ Flip board</button>
+    <button class="action" id="direction">↔ Face to Face</button>
+    <button class="action" id="online">♟ Online room</button>
+    <button class="action" id="settings">⚙ Firebase settings</button>
+  </div>
+  <section class="panel" id="onlinePanel" hidden>
+    <h2>Online room</h2>
+    <p>दो मोबाइल पर लाइव चालें साझा करने के लिए Firebase Realtime Database कॉन्फ़िगरेशन जोड़ना बाकी है।</p>
+    <div class="row"><button class="action primary" id="createRoom">Create room</button><input id="roomCode" maxlength="8" placeholder="Room code" aria-label="Room code"><button class="action" id="joinRoom">Join</button></div>
+    <p class="note" id="roomMsg">यह संस्करण अभी स्थानीय खेल है; Firebase जुड़ने के बाद ही दूसरे मोबाइल के साथ चालें सिंक होंगी।</p>
+  </section>
+  <section class="panel" id="settingsPanel" hidden>
+    <h2>Firebase settings</h2>
+    <p>यह फाइल अभी स्थानीय दो-खिलाड़ी शतरंज चलाती है। साझा लिंक से ऑनलाइन खेलने के लिए Firebase प्रोजेक्ट की कॉन्फ़िगरेशन और रियल-टाइम सिंक जोड़ना आवश्यक है।</p>
+  </section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+(() => {
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const messageEl=document.getElementById('message');
+  if(typeof Chess==='undefined'){
+    statusEl.textContent='CHESS LIBRARY NOT LOADED';
+    messageEl.textContent='इंटरनेट कनेक्शन जाँचें और पेज रीफ्रेश करें।';
+    return;
+  }
+  const game=new Chess();
+  let selected=null,targets=[],flipped=false,lastMove=null,faceToFace=true;
+  const pieceGlyphs={
+    w:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'},
+    b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}
+  };
+  const name=(r,c)=>'abcdefgh'[c]+(8-r);
+  function render(){
+    boardEl.innerHTML='';
+    const position=game.board();
+    for(let vr=0;vr<8;vr++){
+      for(let vc=0;vc<8;vc++){
+        const r=flipped?7-vr:vr, c=flipped?7-vc:vc, sq=name(r,c);
+        const cell=document.createElement('button');
+        cell.type='button';
+        cell.className='square '+((r+c)%2===0?'light':'dark');
+        cell.setAttribute('aria-label',sq);
+        if(lastMove&&(sq===lastMove.from||sq===lastMove.to))cell.classList.add('last');
+        if(selected===sq)cell.classList.add('selected');
+        if(targets.includes(sq)&&!position[r][c])cell.classList.add('target');
+        const p=position[r][c];
+        if(p){
+          const span=document.createElement('span');
+          span.className='piece '+(p.color==='w'?'piece-gold':'piece-black')+(p.type==='p'?' pawn':'')+(p.color==='w'&&p.type==='q'?' gold-queen':'');
+          span.textContent=pieceGlyphs[p.color][p.type];
+          span.setAttribute('aria-label',(p.color==='w'?'White':'Black')+' '+({k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn'}[p.type]));
+          // Optional face-to-face mode: rotate the upper army toward its opponent.
+          if(faceToFace && ((!flipped&&p.color==='b')||(flipped&&p.color==='w'))) span.classList.add('rotated-facing');
+          cell.appendChild(span);
+        }
+        cell.addEventListener('click',()=>tap(sq));
+        boardEl.appendChild(cell);
+      }
+    }
+    let s=game.turn()==='w'?"WHITE'S TURN":"BLACK'S TURN";
+    if(game.in_checkmate())s='CHECKMATE — '+(game.turn()==='w'?'BLACK WINS!':'WHITE WINS!');
+    else if(game.in_check())s+=' · CHECK!';
+    else if(game.in_draw())s='DRAW — NO WINNER';
+    statusEl.textContent=s;
+  }
+  function tap(sq){
+    if(game.game_over()){messageEl.textContent='Game over. नई बाज़ी के लिए New game दबाएँ।';return;}
+    const p=game.get(sq);
+    if(selected&&targets.includes(sq)){
+      const move=game.move({from:selected,to:sq,promotion:'q'});
+      if(move){lastMove={from:move.from,to:move.to};selected=null;targets=[];messageEl.textContent='';render();return;}
+    }
+    if(p&&p.color===game.turn()){
+      selected=sq;targets=game.moves({square:sq,verbose:true}).map(m=>m.to);
+      messageEl.textContent='';
+    }else{selected=null;targets=[];}
+    render();
+  }
+  document.getElementById('newGame').addEventListener('click',()=>{game.reset();selected=null;targets=[];lastMove=null;messageEl.textContent='';render();});
+  document.getElementById('flip').addEventListener('click',()=>{flipped=!flipped;render();});
+  document.getElementById('direction').addEventListener('click',()=>{faceToFace=!faceToFace;document.getElementById('direction').textContent=faceToFace?'↔ Face to Face':'↻ Normal Direction';render();});
+  document.getElementById('online').addEventListener('click',()=>{document.getElementById('onlinePanel').hidden=!document.getElementById('onlinePanel').hidden;});
+  document.getElementById('settings').addEventListener('click',()=>{document.getElementById('settingsPanel').hidden=!document.getElementById('settingsPanel').hidden;});
+  document.getElementById('createRoom').addEventListener('click',()=>{const code=Math.random().toString(36).slice(2,8).toUpperCase();document.getElementById('roomCode').value=code;document.getElementById('roomMsg').textContent='डेमो रूम कोड: '+code+' — ऑनलाइन सिंक के लिए Firebase कॉन्फ़िगरेशन जोड़ना बाकी है।';});
+  document.getElementById('joinRoom').addEventListener('click',()=>{const code=document.getElementById('roomCode').value.trim().toUpperCase();document.getElementById('roomMsg').textContent=code?'कोड '+code+' दर्ज है। अभी Firebase लाइव सिंक उपलब्ध नहीं है।':'पहले Room code दर्ज करें।';});
+  render();
+})();
+</script>
+</body>
+</html>
