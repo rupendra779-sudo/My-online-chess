@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>BILLU CHESS</title>
+<style>
+:root{--page:#000;--light:#F5E6C8;--dark:#8B5E3C;--last:#e8cf54;--select:#8f72df}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--page)}
+body{color:#fff4dc;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:10px 7px max(24px,env(safe-area-inset-bottom))}
+main{width:min(760px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center}main>*{width:100%}
+h1{margin:4px 0 9px;text-align:center;color:#ffe2a2;font:700 clamp(22px,4.5vw,36px)/1.15 Georgia,"Times New Roman",serif;letter-spacing:.8px}
+.status{width:min(365px,100%);margin:0 auto 10px;padding:10px 8px;border:1px solid #444;border-radius:12px;background:#111;text-align:center;font-size:clamp(15px,3vw,20px);font-weight:800;color:#fff}
+.board-wrap{width:100%;display:flex;justify-content:center}.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1;width:100%;max-width:min(100%,720px);overflow:hidden;margin:0 auto}
+.square{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:0;margin:0;overflow:hidden;cursor:pointer;touch-action:manipulation;user-select:none}
+.square.light{background:var(--light)}.square.dark{background:var(--dark)}.square.last{box-shadow:inset 0 0 0 4px var(--last)}.square.selected{box-shadow:inset 0 0 0 4px var(--select)}
+.square.target:after{content:"";position:absolute;width:22%;height:22%;border-radius:50%;background:#17171770;pointer-events:none}
+.piece{display:flex;align-items:center;justify-content:center;position:relative;z-index:1;width:94%;height:94%;font-family:"DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",serif;font-size:clamp(35px,10.4vw,72px);line-height:1;user-select:none}
+.piece-gold{color:#fff;-webkit-text-fill-color:#fff;-webkit-text-stroke:.55px #101820}.piece-black{color:#000;-webkit-text-fill-color:#000;-webkit-text-stroke:.55px #fff}
+.piece.pawn{font-size:clamp(33.25px,9.88vw,68.4px)}.rotated-facing{transform:rotate(180deg)!important}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0;width:100%}
+.action{min-width:0;min-height:48px;padding:10px 5px;border:1px solid #4d4d4d;border-radius:12px;background:#111;color:#f7f7f7;font-size:clamp(11px,2.6vw,15px);font-weight:750;line-height:1.25;cursor:pointer}
+.action.primary{background:linear-gradient(#ffdc89,#f4c66d);border-color:#ffdf9a;color:#17120b}
+.panel{margin-top:12px;padding:14px;background:#111;border:1px solid #45403b;border-radius:14px}.panel[hidden]{display:none}.panel h2{margin:0 0 8px;font-size:18px}.panel p{margin:6px 0 12px;color:#ded2bf;font-size:14px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap}input{flex:1;min-width:120px;border:1px solid #aaa;border-radius:9px;padding:12px;font-size:16px;color:#111;background:#fff}.note{font-size:12px!important;color:#aaa!important;margin-top:10px!important}
+@media(max-width:370px){body{padding-left:5px;padding-right:5px}.controls{gap:5px}.action{font-size:10px;padding:8px 2px;min-height:46px}}
+</style>
+</head>
+<body>
+<main>
+<h1>♟ BILLU CHESS ♟</h1>
+<div class="status" id="status" aria-live="polite">WHITE'S TURN</div>
+<div class="board-wrap"><div class="board" id="board" aria-label="Chess board"></div></div>
+<div id="message" style="display:none" aria-live="polite"></div>
+<div class="controls">
+<button class="action primary" id="newGame">🎮 New game</button>
+<button class="action" id="flip">⇄ Flip board</button>
+<button class="action" id="direction">↔ Face to Face</button>
+</div>
+<section class="panel" id="onlinePanel" hidden>
+<h2>Online room</h2>
+<p id="connectionMsg">लिंक खोलने पर ऑनलाइन गेम अपने-आप कनेक्ट होगा।</p>
+<div class="row"><p id="autoRoomMsg">लिंक खोलने पर गेम अपने-आप कनेक्ट होगा।</p></div>
+
+<p class="note" id="roomMsg">ऑटो-कनेक्शन के लिए वेबसाइट में Firebase कॉन्फ़िगरेशन एक बार सेट होना चाहिए।</p>
+</section>
+<section class="panel" id="settingsPanel" hidden>
+<h2>Firebase settings</h2>
+<p>Firebase Console → Project settings → Your apps → SDK setup and configuration में CDN/Config चुनें। नीचे के मान अपने config से भरें। ये आपके इसी ब्राउज़र में सेव होंगे।</p>
+<div class="row"><input id="apiKey" placeholder="apiKey"><input id="authDomain" placeholder="authDomain (e.g. billu-chess.firebaseapp.com)"></div>
+<div class="row" style="margin-top:8px"><input id="databaseURL" placeholder="databaseURL (Realtime Database URL)"></div>
+<div class="row" style="margin-top:8px"><input id="projectId" placeholder="projectId"><input id="appId" placeholder="appId"></div>
+<div class="row" style="margin-top:8px"><button class="action primary" id="saveConfig">Save & connect</button><button class="action" id="clearConfig">Clear</button></div>
+<p class="note">API key और appId वेबसाइट कॉन्फ़िगरेशन का हिस्सा होते हैं; कभी भी service-account/private key यहाँ न डालें।</p>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>
+(()=> {
+const $=id=>document.getElementById(id), boardEl=$('board'), statusEl=$('status');
+const FIREBASE_CONFIG={apiKey:"AIzaSyBXZINMoOQI0D9_aNs-rxfdit1-9-3sABA",authDomain:"billu-chess.firebaseapp.com",databaseURL:"https://billu-chess-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"billu-chess",storageBucket:"billu-chess.firebasestorage.app",messagingSenderId:"456402081424",appId:"1:456402081424:web:4effa885ad035d8412aa15",measurementId:"G-D9VRS99P9V"};
+const SHARED_ROOM='BILLUONLINE';
+if(typeof Chess==='undefined'){statusEl.textContent='CHESS LIBRARY NOT LOADED';return}
+const game=new Chess();let selected=null,targets=[],flipped=false,lastMove=null,faceToFace=true;
+const LOCAL_SAVE_KEY='billuChessGameStateV2';
+function saveLocalGame(){try{localStorage.setItem(LOCAL_SAVE_KEY,JSON.stringify({fen:game.fen(),history:game.history(),lastMove,flipped,faceToFace}));}catch(e){}}
+function restoreLocalGame(){try{const d=JSON.parse(localStorage.getItem(LOCAL_SAVE_KEY)||'null');if(!d)return false;
+ if(Array.isArray(d.history)&&d.history.length){game.reset();for(const san of d.history){if(!game.move(san)){game.reset();return false;}}}else if(d.fen)game.load(d.fen);
+ lastMove=d.lastMove||null;flipped=!!d.flipped;faceToFace=d.faceToFace!==false;$('direction').textContent=faceToFace?'↔ Face to Face':'↻ Normal Direction';return true;
+ }catch(e){return false}}
+let db=null,auth=null,currentRoom=null,roomRef=null,remoteUpdate=false,connected=false,authUser=null;
+const glyphs={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const squareName=(r,c)=>'abcdefgh'[c]+(8-r);
+function render(){
+ boardEl.innerHTML='';const pos=game.board();
+ for(let vr=0;vr<8;vr++)for(let vc=0;vc<8;vc++){
+  const r=flipped?7-vr:vr,c=flipped?7-vc:vc,sq=squareName(r,c),cell=document.createElement('button');
+  cell.type='button';cell.className='square '+((r+c)%2===0?'light':'dark');cell.setAttribute('aria-label',sq);
+  if(lastMove&&(sq===lastMove.from||sq===lastMove.to))cell.classList.add('last');
+  if(selected===sq)cell.classList.add('selected');if(targets.includes(sq)&&!pos[r][c])cell.classList.add('target');
+  const p=pos[r][c];if(p){const span=document.createElement('span');span.className='piece '+(p.color==='w'?'piece-gold':'piece-black')+(p.type==='p'?' pawn':'');
+   span.textContent=glyphs[p.type];span.setAttribute('aria-label',(p.color==='w'?'White':'Black')+' '+({k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn'}[p.type]));
+   if(faceToFace&&((!flipped&&p.color==='b')||(flipped&&p.color==='w')))span.classList.add('rotated-facing');cell.appendChild(span)}
+  cell.addEventListener('click',()=>tap(sq));boardEl.appendChild(cell)
+ }
+ let s=game.turn()==='w'?"WHITE'S TURN":"BLACK'S TURN";
+ if(game.in_checkmate())s='CHECKMATE — '+(game.turn()==='w'?'BLACK WINS!':'WHITE WINS!');
+ else if(game.in_check())s+=' · CHECK!';else if(game.in_draw())s='DRAW — NO WINNER';
+ statusEl.textContent=currentRoom?'ROOM '+currentRoom+' · '+s:s;
+}
+function publishPosition(){
+ if(!roomRef||remoteUpdate||!connected)return;
+ roomRef.update({fen:game.fen(),history:game.history(),turn:game.turn(),lastMove:lastMove||null,updatedAt:firebase.database.ServerValue.TIMESTAMP})
+ .catch(e=>{$('roomMsg').textContent='Sync error: '+e.message});
+}
+function tap(sq){
+ if(game.game_over())return;const p=game.get(sq);
+ if(selected&&targets.includes(sq)){const m=game.move({from:selected,to:sq,promotion:'q'});if(m){lastMove={from:m.from,to:m.to};selected=null;targets=[];saveLocalGame();render();publishPosition();return}}
+ if(p&&p.color===game.turn()){selected=sq;targets=game.moves({square:sq,verbose:true}).map(m=>m.to)}else{selected=null;targets=[]}
+ render()
+}
+function getConfig(){return {apiKey:$('apiKey').value.trim(),authDomain:$('authDomain').value.trim(),databaseURL:$('databaseURL').value.trim(),projectId:$('projectId').value.trim(),appId:$('appId').value.trim()}}
+function saveToInputs(c){['apiKey','authDomain','databaseURL','projectId','appId'].forEach(k=>$(k).value=c[k]||'')}
+function connect(){
+ try{
+  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+  auth=firebase.auth();db=firebase.database();
+  auth.signInAnonymously().then(cred=>{
+   authUser=cred.user;connected=true;
+   $('roomMsg').textContent='Firebase connected. Shared game खोल रहे हैं…';
+   currentRoom=SHARED_ROOM;
+   const ref=db.ref('rooms/'+SHARED_ROOM);
+   ref.transaction(current=>{
+    if(current===null)return {fen:game.fen(),history:game.history(),turn:game.turn(),lastMove:lastMove||null,createdAt:firebase.database.ServerValue.TIMESTAMP};
+    return current;
+   }).then(()=>watchRoom(SHARED_ROOM)).catch(e=>{$('roomMsg').textContent='Auto room error: '+e.message});
+  }).catch(e=>{$('roomMsg').textContent='Firebase Authentication error: '+e.message+' — Firebase Console में Anonymous sign-in enable करें.'});
+ }catch(e){$('roomMsg').textContent='Firebase config error: '+e.message}
+}
+function watchRoom(code){
+ currentRoom=code;roomRef=db.ref('rooms/'+code);
+ roomRef.on('value',snap=>{const d=snap.val();if(!d)return;if(d.fen&&d.fen!==game.fen()){remoteUpdate=true;let restored=false;
+ if(Array.isArray(d.history)){game.reset();restored=true;for(const san of d.history){if(!game.move(san)){restored=false;break;}}}
+ if(!restored)game.load(d.fen);lastMove=d.lastMove||null;selected=null;targets=[];remoteUpdate=false;saveLocalGame();render()}});
+ $('roomCode').value=code;$('roomMsg').textContent='Room '+code+' से जुड़े हैं। Invite link कॉपी करके दोस्त को भेजें।';
+ const u=new URL(location.href);u.searchParams.set('room',code);history.replaceState({},'',u.toString());render()
+}
+function joinCode(code){if(!connected||!db){$('roomMsg').textContent='पहले Firebase settings में Save & connect करें.';return}
+ code=String(code||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);if(!code){$('roomMsg').textContent='Room code दर्ज करें.';return}
+ db.ref('rooms/'+code).once('value').then(s=>{if(!s.exists()){$('roomMsg').textContent='यह room नहीं मिला। पहले Create room करें या सही code डालें.';return}watchRoom(code)}).catch(e=>$('roomMsg').textContent='Join error: '+e.message)
+}
+$('newGame').addEventListener('click',()=>{if(!confirm('क्या आप सच में नई बाजी शुरू करना चाहते हैं? वर्तमान बाजी मिट जाएगी।'))return;game.reset();selected=null;targets=[];lastMove=null;saveLocalGame();render();if(roomRef)publishPosition()});
+$('flip').addEventListener('click',()=>{flipped=!flipped;saveLocalGame();render()});
+$('direction').addEventListener('click',()=>{faceToFace=!faceToFace;$('direction').textContent=faceToFace?'↔ Face to Face':'↻ Normal Direction';saveLocalGame();render()});
+restoreLocalGame();
+render();
+$('onlinePanel').hidden=true;
+$('roomMsg').textContent='Shared game से अपने-आप जुड़ रहे हैं…';
+connect();
+})();
+</script>
+</body></html>
